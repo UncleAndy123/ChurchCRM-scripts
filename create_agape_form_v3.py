@@ -1,10 +1,6 @@
 """
-Agape Church Directory Form v3
-- Fixed label/field overlap (labels now clearly above fields)
-- Member checkbox for every person
-- 15 children rows
-- Grandparents with Deceased field
-- Occupation field
+Agape Church Directory Form v5
+- Date fields show __/__/____ placeholder (underscores + slashes, no zeros)
 """
 
 from reportlab.lib.pagesizes import letter
@@ -13,8 +9,8 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
 W, H = letter
-M = 0.5 * inch          # left/right margin
-C = W - 2 * M           # usable column width
+M = 0.5 * inch
+C = W - 2 * M
 
 NAVY  = colors.HexColor('#1a3560')
 GOLD  = colors.HexColor('#c8a951')
@@ -25,33 +21,32 @@ MGRAY = colors.HexColor('#bbbbbb')
 WHITE = colors.white
 BLACK = colors.black
 
-# Row geometry — labels sit ABOVE fields with clear gap
-SPACING = 2  # Gap between label and field (adjust this to change all spacing)
-LBL_H  = 2   # label sits 2pt above field top
-FLD_H  = 15   # field height
-ROW_H  = 30   # total vertical step per row (label + field + gap)
-SEC_H  = 20   # section header height + gap
+SPACING = 2
+FLD_H   = 15
+ROW_H   = 30
+SEC_H   = 20
+
+DATE_PLACEHOLDER = '__/__/____'
 
 
-def tf(c, name, x, y, w, h=FLD_H, tip='', multiline=False, comb=False):
+def tf(c, name, x, y, w, h=FLD_H, tip='', value='', multiline=False):
     """Text field. y = TOP of field."""
-    flags = []
-    if multiline:
-        flags.append('multiline')
-    if comb:
-        flags.append('comb')
-    flags_str = ' '.join(flags) if flags else ''
     c.acroForm.textfield(
         name=name, tooltip=tip or name,
         x=x, y=y - h, width=w, height=h,
-        value='', fieldFlags=flags_str,
+        value=value,
+        fieldFlags='multiline' if multiline else '',
         borderColor=MGRAY, fillColor=WHITE,
         textColor=BLACK, forceBorder=True, fontSize=9,
     )
 
 
+def date_field(c, name, x, y, w, h=FLD_H):
+    """Date field pre-filled with __/__/____ so slashes are visible."""
+    tf(c, name, x, y, w, h, tip='mm/dd/yyyy', value=DATE_PLACEHOLDER)
+
+
 def cb(c, name, x, y, tip='Member'):
-    """Checkbox. y = TOP of box."""
     size = 11
     c.acroForm.checkbox(
         name=name, tooltip=tip,
@@ -64,27 +59,23 @@ def cb(c, name, x, y, tip='Member'):
 
 
 def lbl(c, text, x, y, size=7, bold=False, color=None):
-    """Label. y = baseline of text."""
     c.setFillColor(color or colors.HexColor('#333333'))
     c.setFont('Helvetica-Bold' if bold else 'Helvetica', size)
     c.drawString(x, y, text)
 
 
-def field_with_label(c, label_text, name, x, y, w, tip='', required=False, comb=False):
-    """
-    Draw label above field.
-    y = TOP of the label text.
-    Field sits below label with a SPACING gap.
-    Returns x + w (right edge) for chaining.
-    """
+def field_with_label(c, label_text, name, x, y, w,
+                     tip='', required=False, is_date=False):
     req = ' *' if required else ''
     lbl(c, label_text + req, x, y, size=7)
-    tf(c, name, x, y - SPACING, w, FLD_H, tip, comb=comb)
+    if is_date:
+        date_field(c, name, x, y - SPACING, w)
+    else:
+        tf(c, name, x, y - SPACING, w, FLD_H, tip)
     return x + w
 
 
 def cb_with_label(c, name, x, y, text='Member?'):
-    """Checkbox with label above it."""
     lbl(c, text, x, y, size=7)
     cb(c, name, x, y - SPACING - 11)
 
@@ -224,45 +215,37 @@ def build(path):
     field_with_label(c, 'Country', 'country', M + C * 0.82, y, C * 0.18 - 2, tip='US / CA')
     y -= ROW_H
 
-    # Phone / Wedding / Occupation
-    field_with_label(c, 'Home Phone', 'home_phone', M, y, C * 0.28 - 4)
-    field_with_label(c, 'Marriage Date', 'wedding_date',
-                     M + C * 0.30, y, C * 0.20 - 4, tip='00/00/0000', comb=True)
-    field_with_label(c, 'Occupation (head of household)', 'occupation', M + C * 0.52, y, C * 0.48 - 2)
+    field_with_label(c, 'Home Phone',   'home_phone',  M,            y, C * 0.28 - 4)
+    field_with_label(c, 'Marriage Date', 'wedding_date', M + C * 0.30, y, C * 0.20 - 4,
+                     is_date=True)
+    field_with_label(c, 'Occupation (head of household)', 'occupation',
+                     M + C * 0.52, y, C * 0.48 - 2)
     y -= ROW_H + 4
-
     # ── HEAD OF HOUSEHOLD ─────────────────
+
     y = sec(c, y, 'HEAD OF HOUSEHOLD')
-    y = person_row(c, y, 'head', show_member=True,
-                   name_label='First Name', required=False,
-                   show_last=False, show_birthdate=True, show_email=True, show_mobile=True)
+    y = person_row(c, y, 'head', show_last=False,
+                   show_birthdate=True, show_email=True, show_mobile=True)
     y -= 4
-
     # ── SPOUSE ────────────────────────────
+
     y = sec(c, y, 'SPOUSE')
-    y = person_row(c, y, 'spouse', show_member=True,
-                   name_label='First Name',
-                   show_last=False, show_birthdate=True, show_email=True, show_mobile=True)
+    y = person_row(c, y, 'spouse', show_last=False,
+                   show_birthdate=True, show_email=True, show_mobile=True)
     y -= 4
-
     # ── PATERNAL GRANDPARENTS ─────────────
-    y = sec(c, y, "PATERNAL GRANDPARENTS  (Head of Household's parents)", PURP)
-    y = person_row(c, y, 'pat_gf', show_member=True,
-                   name_label='Grandfather First Name',
-                   show_last=True, show_deceased=False)
-    y = person_row(c, y, 'pat_gm', show_member=True,
-                   name_label='Grandmother First Name',
-                   show_last=True, last_label='Maiden Name', show_deceased=False)
-    y -= 4
 
+    y = sec(c, y, "PATERNAL GRANDPARENTS  (Head of Household's parents)", PURP)
+    y = person_row(c, y, 'pat_gf', name_label='Grandfather First Name', show_last=True)
+    y = person_row(c, y, 'pat_gm', name_label='Grandmother First Name',
+                   show_last=True, last_label='Maiden Name')
+    y -= 4
     # ── MATERNAL GRANDPARENTS ─────────────
+
     y = sec(c, y, "MATERNAL GRANDPARENTS  (Spouse's parents)", TEAL)
-    y = person_row(c, y, 'mat_gf', show_member=True,
-                   name_label='Grandfather First Name',
-                   show_last=True, show_deceased=False)
-    y = person_row(c, y, 'mat_gm', show_member=True,
-                   name_label='Grandmother First Name',
-                   show_last=True, last_label='Maiden Name', show_deceased=False)
+    y = person_row(c, y, 'mat_gf', name_label='Grandfather First Name', show_last=True)
+    y = person_row(c, y, 'mat_gm', name_label='Grandmother First Name',
+                   show_last=True, last_label='Maiden Name')
 
     draw_footer(c, 1, 2)
     c.showPage()
@@ -280,40 +263,32 @@ def build(path):
     c.rect(M, y - 14, C, 14, fill=1, stroke=0)
     c.setFont('Helvetica-Bold', 7)
     c.setFillColor(colors.HexColor('#333333'))
-    headers = [
-        (M + 2,        '#'),
-        (M + 22,       'First Name'),
-        (M + C*0.26,   'Middle Name (or initial)'),
-        (M + C*0.43,   'Birthdate (mm/dd/yyyy)'),
-        (M + C*0.58,   'Spouse Name e.g. John L. Smith'),
-        (M + C*0.84,   'Member?'),
-    ]
-    for hx, ht in headers:
+    for hx, ht in [
+        (M + 2,      '#'),
+        (M + 22,     'First Name'),
+        (M + C*0.26, 'Middle Name (or initial)'),
+        (M + C*0.43, 'Birthdate (mm/dd/yyyy)'),
+        (M + C*0.58, 'Spouse Name  e.g. John L. Smith'),
+        (M + C*0.84, 'Member?'),
+    ]:
         c.drawString(hx, y - 10, ht)
     y -= 18
 
     for i in range(1, 21):
-        bg = LGRAY if i % 2 == 1 else WHITE
-        row_h = 20
-        c.setFillColor(bg)
-        c.rect(M, y - row_h + 4, C, row_h, fill=1, stroke=0)
-
-        # Row number
+        c.setFillColor(LGRAY if i % 2 == 1 else WHITE)
+        c.rect(M, y - 16, C, 20, fill=1, stroke=0)
         c.setFillColor(colors.HexColor('#aaaaaa'))
         c.setFont('Helvetica', 7)
         c.drawString(M + 5, y - 8, str(i))
 
-        p = f'child{i}'
-        # Fields sit with top at y-1
+        p  = f'child{i}'
         ft = y - 1
-        tf(c, f'{p}_first',     M + 22,      ft, C*0.23 - 4, 14)
-        tf(c, f'{p}_middle',    M + C*0.26,  ft, C*0.16 - 4, 14)
-        tf(c, f'{p}_birthdate', M + C*0.43,  ft, C*0.12 - 4, 14, '00/00/0000', comb=True)
-        tf(c, f'{p}_spouse',    M + C*0.58,  ft, C*0.25 - 4, 14,
-           'Spouse name → PersonCustom:Married:')
-        cb(c, f'{p}_member',    M + C*0.85,  ft + 1)
-
-        y -= row_h
+        tf(c,         f'{p}_first',     M + 22,      ft, C*0.23 - 4, 14)
+        tf(c,         f'{p}_middle',    M + C*0.26,  ft, C*0.16 - 4, 14)
+        date_field(c, f'{p}_birthdate', M + C*0.43,  ft, C*0.12 - 4, 14)
+        tf(c,         f'{p}_spouse',    M + C*0.58,  ft, C*0.25 - 4, 14)
+        cb(c,         f'{p}_member',    M + C*0.85,  ft + 1)
+        y -= 20
 
     y -= 10
 
@@ -342,9 +317,10 @@ def build(path):
 
     # ── SUBMITTER CONTACT ─────────────────
     y = sec(c, y, 'FORM SUBMISSION CONTACT')
-    field_with_label(c, 'Name', 'submitter_name', M, y, C * 0.50 - 4)
-    field_with_label(c, 'Email Address', 'submitter_email', M + C * 0.52, y, C * 0.48 - 2)
-    field_with_label(c, 'Submission Deadline', 'submission_deadline', M, y - ROW_H, C * 0.25 - 2)
+    field_with_label(c, 'Name',                'submitter_name',      M,            y, C * 0.50 - 4)
+    field_with_label(c, 'Email Address',       'submitter_email',     M + C * 0.52, y, C * 0.48 - 2)
+    field_with_label(c, 'Submission Deadline', 'submission_deadline', M,            y - ROW_H, C * 0.30 - 2)
+
     draw_footer(c, 2, 2)
     c.showPage()
     c.save()
