@@ -150,7 +150,7 @@ def person_row(c, y, prefix, show_member=True,
     # Birthdate (optional)
     if show_birthdate:
         w = C * 0.15
-        field_with_label(c, 'Birthdate', f'{prefix}_birthdate', x, y, w - 4, tip='00/00/0000', comb=True)
+        field_with_label(c, 'Birthdate', f'{prefix}_birthdate', x, y, w - 4, tip='00/00/0000', is_date=True)
         x += w
 
     # Deceased (grandparents)
