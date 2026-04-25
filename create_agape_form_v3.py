@@ -303,7 +303,7 @@ def person_row(c, y, prefix, show_member=True,
 
     if show_birthdate:
         w = C * 0.15
-        lbl(c, 'Birthdate', x, y, size=7)
+        lbl(c, 'Birthdate (mm/dd/yyyy)', x, y, size=7)
         date_tf(c, f'{prefix}_birthdate', x, y - SPACING, w - 4, FLD_H)
         x += w
 
@@ -375,7 +375,7 @@ def build(path):
     y -= ROW_H
 
     field_with_label(c, 'Home Phone', 'home_phone', M, y, C * 0.28 - 4)
-    lbl(c, 'Marriage Date', M + C * 0.30, y, size=7)
+    lbl(c, 'Marriage Date (mm/dd/yyyy)', M + C * 0.30, y, size=7)
     date_tf(c, 'wedding_date', M + C * 0.30, y - SPACING, C * 0.20 - 4, FLD_H)
     field_with_label(c, 'Occupation (head of household)', 'occupation',
                      M + C * 0.52, y, C * 0.48 - 2)
