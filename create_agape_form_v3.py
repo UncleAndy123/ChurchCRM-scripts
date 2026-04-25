@@ -2,35 +2,66 @@
 Agape Church Directory Form v6
 Base: v3 (multi-box dates, comb fields, all original layout)
 Change: Children spouse name split into First Name / Middle Initial / Last Name
+
+This script generates a fillable PDF form for church family information collection.
+The form includes sections for family info, head of household, spouse, grandparents, and children.
 """
 
+# ════════════════════════════════════════════════════════════════════════════════
+# IMPORTS
+# ════════════════════════════════════════════════════════════════════════════════
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
-W, H = letter
-M = 0.5 * inch
-C = W - 2 * M
+# ════════════════════════════════════════════════════════════════════════════════
+# PAGE LAYOUT & DIMENSIONS
+# ════════════════════════════════════════════════════════════════════════════════
+W, H = letter  # Page width and height (8.5" x 11")
+M = 0.5 * inch  # Left/right margin
+C = W - 2 * M  # Content width (usable area)
 
-NAVY  = colors.HexColor('#1a3560')
-GOLD  = colors.HexColor('#c8a951')
-PURP  = colors.HexColor('#4a148c')
-TEAL  = colors.HexColor('#00695c')
-LGRAY = colors.HexColor('#f5f5f5')
-MGRAY = colors.HexColor('#bbbbbb')
-WHITE = colors.white
-BLACK = colors.black
+# ════════════════════════════════════════════════════════════════════════════════
+# COLOR PALETTE
+# ════════════════════════════════════════════════════════════════════════════════
+NAVY  = colors.HexColor('#1a3560')  # Primary heading color
+GOLD  = colors.HexColor('#c8a951')  # Accent stripe on section headers
+PURP  = colors.HexColor('#4a148c')  # Paternal grandparents section color
+TEAL  = colors.HexColor('#00695c')  # Maternal grandparents section color
+LGRAY = colors.HexColor('#f5f5f5')  # Light gray for alternating rows
+MGRAY = colors.HexColor('#bbbbbb')  # Medium gray for form borders
+WHITE = colors.white               # White background
+BLACK = colors.black               # Black text
 
-SPACING = 2
-LBL_H  = 2
-FLD_H  = 15
-ROW_H  = 30
-SEC_H  = 20
+# ════════════════════════════════════════════════════════════════════════════════
+# FORM GEOMETRY (vertical spacing, field dimensions)
+# ════════════════════════════════════════════════════════════════════════════════
+SPACING = 2     # Gap between label and field (points)
+LBL_H  = 2      # Label height
+FLD_H  = 15     # Standard field height
+ROW_H  = 30     # Vertical step per row (label + field + gap)
+SEC_H  = 20     # Section header height + gap
 
+
+# ════════════════════════════════════════════════════════════════════════════════
+# FORM FIELD CREATION FUNCTIONS
+# ════════════════════════════════════════════════════════════════════════════════
 
 def tf(c, name, x, y, w, h=FLD_H, tip='', multiline=False, comb=False, maxlen=0):
-    """Text field. y = TOP of field."""
+    """Create a text field in the PDF form.
+    
+    Args:
+        c: Canvas object
+        name: Field name (used for form submission)
+        x, y: Position (y = top of field)
+        w: Field width
+        h: Field height (default: FLD_H=15pt)
+        tip: Tooltip text
+        multiline: Allow multiple lines if True
+        comb: Use comb field (fixed-width character boxes) if True
+        maxlen: Maximum character limit (0 = unlimited)
+    """
     flags = []
     if multiline:
         flags.append('multiline')
@@ -52,10 +83,18 @@ def tf(c, name, x, y, w, h=FLD_H, tip='', multiline=False, comb=False, maxlen=0)
 
 
 def date_tf(c, name, x, y, w, h=FLD_H, tip='MM/DD/YYYY'):
-    """
-    Draw a date as 3 separate fields: MM / DD / YYYY
-    Slashes are static page text between fields, so they remain visible in Edge.
-    y = TOP of field area.
+    """Create a date field as 3 separate comb fields (MM/DD/YYYY).
+    
+    Slashes are drawn as static text on the page, so they remain visible
+    when the PDF is viewed in Microsoft Edge (which sometimes hides field borders).
+    
+    Args:
+        c: Canvas object
+        name: Base field name (fields created as {name}_mm, {name}_dd, {name}_yyyy)
+        x, y: Position (y = top of field area)
+        w: Total width for all 3 fields plus slashes
+        h: Field height
+        tip: Tooltip text
     """
     slash_gap = 6
     total_slash_space = slash_gap * 2
@@ -83,7 +122,14 @@ def date_tf(c, name, x, y, w, h=FLD_H, tip='MM/DD/YYYY'):
 
 
 def cb(c, name, x, y, tip='Member'):
-    """Checkbox. y = TOP of box."""
+    """Create a checkbox field.
+    
+    Args:
+        c: Canvas object
+        name: Field name
+        x, y: Position (y = top of checkbox)
+        tip: Tooltip text
+    """
     size = 11
     c.acroForm.checkbox(
         name=name, tooltip=tip,
@@ -96,13 +142,38 @@ def cb(c, name, x, y, tip='Member'):
 
 
 def lbl(c, text, x, y, size=7, bold=False, color=None):
-    """Label. y = baseline of text."""
+    """Draw a label text on the page.
+    
+    Args:
+        c: Canvas object
+        text: Label text to display
+        x, y: Position (y = baseline of text)
+        size: Font size in points
+        bold: Use bold font if True
+        color: Text color (default: dark gray)
+    """
     c.setFillColor(color or colors.HexColor('#333333'))
     c.setFont('Helvetica-Bold' if bold else 'Helvetica', size)
     c.drawString(x, y, text)
 
 
 def field_with_label(c, label_text, name, x, y, w, tip='', required=False, comb=False, maxlen=None):
+    """Create a labeled text field (label above field).
+    
+    Args:
+        c: Canvas object
+        label_text: Label to display above field
+        name: Field name
+        x, y: Position (y = top of label)
+        w: Field width
+        tip: Tooltip for the field
+        required: Add asterisk (*) to label if True
+        comb: Use comb field format if True
+        maxlen: Maximum characters (None = unlimited)
+        
+    Returns:
+        x + w: Right edge position for chaining
+    """
     req = ' *' if required else ''
     lbl(c, label_text + req, x, y, size=7)
     tf(c, name, x, y - SPACING, w, FLD_H, tip, comb=comb, maxlen=maxlen)
@@ -110,31 +181,64 @@ def field_with_label(c, label_text, name, x, y, w, tip='', required=False, comb=
 
 
 def cb_with_label(c, name, x, y, text='Member?'):
+    """Create a labeled checkbox (label above checkbox).
+    
+    Args:
+        c: Canvas object
+        name: Field name
+        x, y: Position (y = top of label)
+        text: Label text
+    """
     lbl(c, text, x, y, size=7)
-    cb(c, name, x, y - SPACING - 11)
+    cb(c, name, x, y - SPACING)
 
 
 def sec(c, y, title, color=NAVY):
+    """Draw a section header bar with colored background.
+    
+    Args:
+        c: Canvas object
+        y: Y position for section header
+        title: Section title text
+        color: Background color (default: NAVY)
+        
+    Returns:
+        y coordinate for first content row below header
+    """
+    # Draw colored background bar
     c.setFillColor(color)
     c.rect(M, y - SEC_H + 4, C, SEC_H - 2, fill=1, stroke=0)
+    # Draw gold accent stripe on left
     c.setFillColor(GOLD)
     c.rect(M, y - SEC_H + 4, 4, SEC_H - 2, fill=1, stroke=0)
+    # Draw white title text
     c.setFillColor(WHITE)
     c.setFont('Helvetica-Bold', 8.5)
     c.drawString(M + 10, y - 10, title)
+    # Return y position for content below header
     return y - SEC_H - 2
 
 
 def draw_header(c):
+    """Draw the page header with title and contact information.
+    
+    Args:
+        c: Canvas object
+    """
+    # Navy background bar
     c.setFillColor(NAVY)
     c.rect(0, H - 0.85*inch, W, 0.85*inch, fill=1, stroke=0)
+    # Gold accent line
     c.setFillColor(GOLD)
     c.rect(0, H - 0.9*inch, W, 0.05*inch, fill=1, stroke=0)
+    # Main title
     c.setFillColor(WHITE)
     c.setFont('Helvetica-Bold', 16)
     c.drawCentredString(W/2, H - 0.44*inch, 'Agape Church Directory')
+    # Subtitle
     c.setFont('Helvetica', 9)
     c.drawCentredString(W/2, H - 0.60*inch, 'Family Information Form')
+    # Contact info
     c.setFont('Helvetica', 7.5)
     c.setFillColor(colors.HexColor('#aaaaaa'))
     c.drawCentredString(W/2, H - 0.76*inch,
@@ -142,8 +246,17 @@ def draw_header(c):
 
 
 def draw_footer(c, page, total):
+    """Draw the page footer with copyright and page numbers.
+    
+    Args:
+        c: Canvas object
+        page: Current page number
+        total: Total number of pages
+    """
+    # Light gray background bar
     c.setFillColor(colors.HexColor('#e0e0e0'))
     c.rect(0, 0, W, 0.28*inch, fill=1, stroke=0)
+    # Footer text (copyright and page number)
     c.setFillColor(colors.HexColor('#888888'))
     c.setFont('Helvetica', 7)
     c.drawCentredString(W/2, 0.13*inch, 'Agape Christian Fellowships 2026.')
@@ -154,6 +267,25 @@ def person_row(c, y, prefix, show_member=True,
                name_label='First Name', required=False,
                show_last=True, last_label='Last Name', show_email=False,
                show_mobile=False, show_deceased=False, show_birthdate=False):
+    """Draw a flexible person data row with name fields and optional details.
+    
+    Args:
+        c: Canvas object
+        y: Starting Y position (top of row)
+        prefix: Field name prefix (e.g., 'head', 'spouse', 'pat_gf')
+        show_member: Include member checkbox if True
+        name_label: Label for first name field
+        required: Mark fields as required if True
+        show_last: Include last name field if True
+        last_label: Label for last name field
+        show_email: Include email field if True
+        show_mobile: Include mobile phone field if True
+        show_deceased: Include deceased field if True
+        show_birthdate: Include birthdate field if True
+        
+    Returns:
+        New Y position after this row
+    """
     x = M
 
     w = C * (0.22 if show_last else 0.28)
@@ -205,16 +337,23 @@ def person_row(c, y, prefix, show_member=True,
 
 
 def build(path):
+    """Generate the PDF form and save to the specified path.
+    
+    Args:
+        path: Output file path for the PDF
+    """
     c = canvas.Canvas(path, pagesize=letter)
     c.setTitle('Agape Church Directory Form')
 
-    # ══════════════════════════════════════
-    # PAGE 1
-    # ══════════════════════════════════════
+    # ╔════════════════════════════════════════════════════════════════════════╗
+    # ║ PAGE 1: FAMILY INFORMATION, HEAD OF HOUSEHOLD, SPOUSE, GRANDPARENTS     ║
+    # ╚════════════════════════════════════════════════════════════════════════╝
     draw_header(c)
     y = H - 0.96 * inch
 
-    # ── FAMILY INFORMATION ────────────────
+    # ══════════════════════════════════════════════════════════════════════════
+    # FAMILY INFORMATION SECTION
+    # ══════════════════════════════════════════════════════════════════════════
     y = sec(c, y, 'FAMILY INFORMATION')
 
     # Church Name / Family Last Name
@@ -242,8 +381,9 @@ def build(path):
                      M + C * 0.52, y, C * 0.48 - 2)
     y -= ROW_H + 4
 
-    # ── HEAD OF HOUSEHOLD ─────────────────
-
+    # ══════════════════════════════════════════════════════════════════════════
+    # HEAD OF HOUSEHOLD SECTION
+    # ══════════════════════════════════════════════════════════════════════════
     y = sec(c, y, 'HEAD OF HOUSEHOLD')
     y = person_row(c, y, 'head', show_member=True,
                    name_label='First Name', required=False,
@@ -282,12 +422,15 @@ def build(path):
     draw_footer(c, 1, 2)
     c.showPage()
 
-    # ══════════════════════════════════════
-    # PAGE 2 — CHILDREN
-    # ══════════════════════════════════════
+    # ╔════════════════════════════════════════════════════════════════════════╗
+    # ║ PAGE 2: CHILDREN, NOTES, AND SUBMISSION CONTACT INFORMATION             ║
+    # ╚════════════════════════════════════════════════════════════════════════╝
     draw_header(c)
     y = H - 0.96 * inch
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # CHILDREN SECTION
+    # ══════════════════════════════════════════════════════════════════════════
     y = sec(c, y, 'CHILDREN  (up to 20 — leave blank rows empty)')
 
     # Column x anchors for spouse split
@@ -377,9 +520,15 @@ def build(path):
 
     draw_footer(c, 2, 2)
     c.showPage()
+    
+    # Save the PDF to disk
     c.save()
     print(f'Saved: {path}')
 
 
+# ════════════════════════════════════════════════════════════════════════════════
+# MAIN EXECUTION
+# ════════════════════════════════════════════════════════════════════════════════
 if __name__ == '__main__':
-       build(r'C:\Users\AndrewTravel\Downloads\Agape_Church_Directory_Form_v6.1.pdf')
+    # Generate the PDF form
+    build(r'C:\Users\AndrewTravel\Downloads\Agape_Church_Directory_Form_v6.1.pdf')
