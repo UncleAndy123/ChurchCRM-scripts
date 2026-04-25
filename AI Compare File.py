@@ -175,6 +175,7 @@ def person_row(c, y, prefix, show_member=True,
         date_tf(c, f'{prefix}_birthdate', x, y - SPACING, w - 4, FLD_H)
         x += w
 
+    # Deceased (grandparents)
     if show_deceased:
         w = C * 0.14
         field_with_label(c, 'Deceased?', f'{prefix}_deceased', x, y, w - 4, tip='Y or year')
@@ -188,6 +189,7 @@ def person_row(c, y, prefix, show_member=True,
 
     y -= ROW_H
 
+    # Optional row 2: Email + Mobile
     if show_email or show_mobile:
         x = M
         if show_email:
@@ -212,15 +214,19 @@ def build(path):
     draw_header(c)
     y = H - 0.96 * inch
 
+    # ── FAMILY INFORMATION ────────────────
     y = sec(c, y, 'FAMILY INFORMATION')
 
+    # Church Name / Family Last Name
     x = M
     field_with_label(c, 'Church Name', 'church_name', x, y, C * 0.42 - 4)
     field_with_label(c, 'Family Last Name ', 'family_last_name',
                      x + C * 0.44, y, C * 0.56 - 2, required=False)
     y -= ROW_H
 
+    # Address
     field_with_label(c, 'Street Address', 'address1', M, y, C * 0.64 - 4)
+    #field_with_label(c, 'Address Line 2', 'address2', M + C * 0.66, y, C * 0.34 - 2)
     y -= ROW_H
 
     field_with_label(c, 'City', 'city', M, y, C * 0.40 - 4)
@@ -236,17 +242,23 @@ def build(path):
                      M + C * 0.52, y, C * 0.48 - 2)
     y -= ROW_H + 4
 
+    # ── HEAD OF HOUSEHOLD ─────────────────
+
     y = sec(c, y, 'HEAD OF HOUSEHOLD')
     y = person_row(c, y, 'head', show_member=True,
                    name_label='First Name', required=False,
                    show_last=False, show_birthdate=True, show_email=True, show_mobile=True)
     y -= 4
 
+    # ── SPOUSE ────────────────────────────
+
     y = sec(c, y, 'SPOUSE')
     y = person_row(c, y, 'spouse', show_member=True,
                    name_label='First Name',
                    show_last=False, show_birthdate=True, show_email=True, show_mobile=True)
     y -= 4
+
+    # ── PATERNAL GRANDPARENTS ─────────────
 
     y = sec(c, y, "PATERNAL GRANDPARENTS  (Head of Household's parents)", PURP)
     y = person_row(c, y, 'pat_gf', show_member=True,
@@ -256,6 +268,8 @@ def build(path):
                    name_label='Grandmother First Name',
                    show_last=True, last_label='Maiden Name', show_deceased=False)
     y -= 4
+
+    # ── MATERNAL GRANDPARENTS ─────────────
 
     y = sec(c, y, "MATERNAL GRANDPARENTS  (Spouse's parents)", TEAL)
     y = person_row(c, y, 'mat_gf', show_member=True,
