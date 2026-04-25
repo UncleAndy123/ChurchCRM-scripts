@@ -1,6 +1,9 @@
 """
-Agape Church Directory Form v5
-- Date fields show __/__/____ placeholder (underscores + slashes, no zeros)
+Agape Church Directory Form v6
+Changes from v5:
+  - Notes field is a tall scrollable multiline box (unlimited text)
+  - Children spouse split into: First Name / Middle Initial / Last Name
+  - Disclaimer text cleaned up (removed blank first line)
 """
 
 from reportlab.lib.pagesizes import letter
@@ -150,13 +153,15 @@ def person_row(c, y, prefix, show_member=True,
     # Birthdate (optional)
     if show_birthdate:
         w = C * 0.15
-        field_with_label(c, 'Birthdate', f'{prefix}_birthdate', x, y, w - 4, tip='00/00/0000', is_date=True)
+        field_with_label(c, 'Birthdate', f'{prefix}_birthdate', x, y, w - 4,
+                         tip='mm/dd/yyyy', is_date=True)
         x += w
 
     # Deceased (grandparents)
     if show_deceased:
         w = C * 0.14
-        field_with_label(c, 'Deceased?', f'{prefix}_deceased', x, y, w - 4, tip='Y or year')
+        field_with_label(c, 'Deceased?', f'{prefix}_deceased', x, y, w - 4,
+                         tip='Y or year')
         x += w
 
     # Member checkbox
@@ -199,8 +204,8 @@ def build(path):
     # Church Name / Family Last Name
     x = M
     field_with_label(c, 'Church Name', 'church_name', x, y, C * 0.42 - 4)
-    field_with_label(c, 'Family Last Name ', 'family_last_name',
-                     x + C * 0.44, y, C * 0.56 - 2, required=False)
+    field_with_label(c, 'Family Last Name', 'family_last_name',
+                     x + C * 0.44, y, C * 0.56 - 2)
     y -= ROW_H
 
     # Address
@@ -209,30 +214,34 @@ def build(path):
     y -= ROW_H
 
     # City / State / ZIP / Country
-    field_with_label(c, 'City', 'city', M, y, C * 0.40 - 4)
-    field_with_label(c, 'State/Province', 'state', M + C * 0.42, y, C * 0.17 - 4)
-    field_with_label(c, 'ZIP/Postal', 'zip', M + C * 0.61, y, C * 0.19 - 4)
-    field_with_label(c, 'Country', 'country', M + C * 0.82, y, C * 0.18 - 2, tip='US / CA')
+    field_with_label(c, 'City',           'city',    M,             y, C * 0.40 - 4)
+    field_with_label(c, 'State/Province', 'state',   M + C * 0.42,  y, C * 0.17 - 4)
+    field_with_label(c, 'ZIP/Postal',     'zip',     M + C * 0.61,  y, C * 0.19 - 4)
+    field_with_label(c, 'Country',        'country', M + C * 0.82,  y, C * 0.18 - 2,
+                     tip='US / CA')
     y -= ROW_H
 
-    field_with_label(c, 'Home Phone',   'home_phone',  M,            y, C * 0.28 - 4)
+    field_with_label(c, 'Home Phone',    'home_phone',   M,            y, C * 0.28 - 4)
     field_with_label(c, 'Marriage Date', 'wedding_date', M + C * 0.30, y, C * 0.20 - 4,
                      is_date=True)
     field_with_label(c, 'Occupation (head of household)', 'occupation',
                      M + C * 0.52, y, C * 0.48 - 2)
     y -= ROW_H + 4
+
     # ── HEAD OF HOUSEHOLD ─────────────────
 
     y = sec(c, y, 'HEAD OF HOUSEHOLD')
     y = person_row(c, y, 'head', show_last=False,
                    show_birthdate=True, show_email=True, show_mobile=True)
     y -= 4
+
     # ── SPOUSE ────────────────────────────
 
     y = sec(c, y, 'SPOUSE')
     y = person_row(c, y, 'spouse', show_last=False,
                    show_birthdate=True, show_email=True, show_mobile=True)
     y -= 4
+
     # ── PATERNAL GRANDPARENTS ─────────────
 
     y = sec(c, y, "PATERNAL GRANDPARENTS  (Head of Household's parents)", PURP)
@@ -240,6 +249,7 @@ def build(path):
     y = person_row(c, y, 'pat_gm', name_label='Grandmother First Name',
                    show_last=True, last_label='Maiden Name')
     y -= 4
+
     # ── MATERNAL GRANDPARENTS ─────────────
 
     y = sec(c, y, "MATERNAL GRANDPARENTS  (Spouse's parents)", TEAL)
@@ -258,22 +268,40 @@ def build(path):
 
     y = sec(c, y, 'CHILDREN  (up to 20 — leave blank rows empty)')
 
-    # Column header row
+    # ── Column header row ─────────────────
+    # Layout proportions for child rows:
+    #   #          : fixed ~20px
+    #   First      : C*0.23
+    #   Middle     : C*0.13
+    #   Birthdate  : C*0.12
+    #   Sp. First  : C*0.13
+    #   Sp. MI     : C*0.06
+    #   Sp. Last   : C*0.11
+    #   Member     : ~18px checkbox
+
+    SP_FIRST_X = M + C * 0.58
+    SP_MI_X    = M + C * 0.71
+    SP_LAST_X  = M + C * 0.77
+    MBR_X      = M + C * 0.88
+
     c.setFillColor(colors.HexColor('#e8e8e8'))
     c.rect(M, y - 14, C, 14, fill=1, stroke=0)
     c.setFont('Helvetica-Bold', 7)
     c.setFillColor(colors.HexColor('#333333'))
     for hx, ht in [
-        (M + 2,      '#'),
-        (M + 22,     'First Name'),
-        (M + C*0.26, 'Middle Name (or initial)'),
-        (M + C*0.43, 'Birthdate (mm/dd/yyyy)'),
-        (M + C*0.58, 'Spouse Name  e.g. John L. Smith'),
-        (M + C*0.84, 'Member?'),
+        (M + 2,          '#'),
+        (M + 22,         'First Name'),
+        (M + C * 0.26,   'Middle Name'),
+        (M + C * 0.43,   'Birthdate (mm/dd/yyyy)'),
+        (SP_FIRST_X,     'Spouse First'),
+        (SP_MI_X,        'MI'),
+        (SP_LAST_X,      'Spouse Last Name'),
+        (MBR_X,          'Member?'),
     ]:
         c.drawString(hx, y - 10, ht)
     y -= 18
 
+    # ── Child rows ────────────────────────
     for i in range(1, 21):
         c.setFillColor(LGRAY if i % 2 == 1 else WHITE)
         c.rect(M, y - 16, C, 20, fill=1, stroke=0)
@@ -283,39 +311,53 @@ def build(path):
 
         p  = f'child{i}'
         ft = y - 1
-        tf(c,         f'{p}_first',     M + 22,      ft, C*0.23 - 4, 14)
-        tf(c,         f'{p}_middle',    M + C*0.26,  ft, C*0.16 - 4, 14)
-        date_field(c, f'{p}_birthdate', M + C*0.43,  ft, C*0.12 - 4, 14)
-        tf(c,         f'{p}_spouse',    M + C*0.58,  ft, C*0.25 - 4, 14)
-        cb(c,         f'{p}_member',    M + C*0.85,  ft + 1)
+
+        # Name fields
+        tf(c, f'{p}_first',            M + 22,       ft, C * 0.23 - 4, 14)
+        tf(c, f'{p}_middle',           M + C * 0.26, ft, C * 0.13 - 4, 14)
+
+        # Birthdate
+        date_field(c, f'{p}_birthdate', M + C * 0.43, ft, C * 0.12 - 4, 14)
+
+        # Spouse: First / MI / Last  (replaces single spouse name field)
+        tf(c, f'{p}_spouse_first',     SP_FIRST_X,   ft, C * 0.13 - 4, 14)
+        tf(c, f'{p}_spouse_mi',        SP_MI_X,      ft, C * 0.06 - 4, 14)
+        tf(c, f'{p}_spouse_last',      SP_LAST_X,    ft, C * 0.11 - 4, 14)
+
+        # Member checkbox
+        cb(c, f'{p}_member',           MBR_X,        ft + 1)
+
         y -= 20
 
     y -= 10
 
     # ── NOTES ────────────────────────────
+    # Tall scrollable multiline field — users can type as much as they want.
+    NOTES_H = 100
     y = sec(c, y, 'NOTES')
-    tf(c, 'notes', M, y - 2, C - 2, 50, multiline=True)
-    y -= 60
+    tf(c, 'notes', M, y - 2, C - 2, NOTES_H, multiline=True,
+       tip='Type as much as needed — scroll to read more.')
+    y -= NOTES_H + 10
 
-    # Disclaimer (2 paragraphs)
-    disclaimer_height = 50
+    # ── Disclaimer ────────────────────────
+    disclaimer_height = 42
     c.setFillColor(colors.HexColor('#f0f0f0'))
     c.rect(M, y - disclaimer_height, C, disclaimer_height, fill=1, stroke=0)
-    c.setFillColor(colors.HexColor("#464545"))
+    c.setFillColor(colors.HexColor('#464545'))
     c.setFont('Helvetica', 7.5)
     # Paragraph 1
     c.drawString(M + 6, y - 10,
-        '')
-    c.drawString(M + 6, y - 18,
-        'Fill out the form as completely as possible. Leave blank any fields that do not apply to you. Add any other relevant information in the Notes section. ')
-    c.drawString(M + 6, y - 26,
-                 'Please note that the member check box applies to being a member at any Agape church, not necessarily the one you attend.')
-    # Paragraph 2
-    c.drawString(M + 6, y - 34,
-        'Please verify all information is correct and spelled as you want it to appear in the directory then submit theform to the contact below.')
-    y -= 50
+        'Fill out the form as completely as possible. Leave blank any fields that do not apply to you. '
+        'Add any other relevant information in the Notes section.')
+    c.drawString(M + 6, y - 20,
+        'Please note that the member check box applies to being a member at any Agape church, '
+        'not necessarily the one you attend.')
+    c.drawString(M + 6, y - 30,
+        'Please verify all information is correct and spelled as you want it to appear in the '
+        'directory then submit the form to the contact below.')
+    y -= disclaimer_height + 4
 
-    # ── SUBMITTER CONTACT ─────────────────
+    # ── FORM SUBMISSION CONTACT ───────────
     y = sec(c, y, 'FORM SUBMISSION CONTACT')
     field_with_label(c, 'Name',                'submitter_name',      M,            y, C * 0.50 - 4)
     field_with_label(c, 'Email Address',       'submitter_email',     M + C * 0.52, y, C * 0.48 - 2)
