@@ -293,7 +293,7 @@ def person_row(c, y, prefix, show_member=True,
     x += w
 
     w = C * 0.16
-    field_with_label(c, 'Middle Initial/Name', f'{prefix}_middle', x, y, w - 4)
+    field_with_label(c, 'Middle Initial', f'{prefix}_middle', x, y, w - 4)
     x += w
 
     if show_last:
