@@ -293,7 +293,7 @@ def person_row(c, y, prefix, show_member=True,
     x += w
 
     w = C * 0.16
-    field_with_label(c, 'Middle Initial', f'{prefix}_middle', x, y, w - 4)
+    field_with_label(c, 'Middle Initial/Name', f'{prefix}_middle', x, y, w - 4)
     x += w
 
     if show_last:
@@ -450,9 +450,9 @@ def build(path):
         (M + C*0.26,  'Middle Name'),
         (M + C*0.43,  'Birthdate (mm/dd/yyyy)'),
         (SP_FST_X,    'Spouse First'),
-        (SP_MI_X,     'MI'),
+        (SP_MI_X,     'Initial'),
         (SP_LST_X,    'Spouse Last Name'),
-        (MBR_X,       'Member?'),
+        (MBR_X + 15,       'Member?'),
     ]:
         c.drawString(hx, y - 10, ht)
     y -= 18
@@ -483,7 +483,7 @@ def build(path):
         tf(c, f'{p}_spouse_mi',    SP_MI_X,     ft, SP_LST_X - SP_MI_X  - 4, 14)
         tf(c, f'{p}_spouse_last',  SP_LST_X,    ft, MBR_X    - SP_LST_X - 6, 14)
 
-        cb(c, f'{p}_member', MBR_X, ft + 1)
+        cb(c, f'{p}_member', MBR_X + 20, ft + 1)
 
         y -= row_h
 
