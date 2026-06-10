@@ -190,18 +190,6 @@ The CSV export uses UTF-8 encoding. Most spreadsheet applications handle this au
 
 ---
 
-## Support & Contact
-
-For issues or questions about the Agape Church Directory form:
-📧 **agapecfdirectory@outlook.com**
-
----
-
-## License
-
-This project is provided as-is for use by Agape Christian Fellowships. Please contact the church for licensing information.
-
----
 
 ## Version History
 
@@ -216,4 +204,4 @@ This project is provided as-is for use by Agape Christian Fellowships. Please co
 
 **Last Updated:** 2026-04-25
 
-**Made with ❤️ for Agape Christian Fellowships**
+**Andrew Burkholder**
